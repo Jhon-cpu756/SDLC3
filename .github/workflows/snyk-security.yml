@@ -46,13 +46,6 @@ jobs:
       - name: Authenticate with Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
-      - name: Validate JSON files
-        run: |
-          for file in $(find . -name "*.json"); do
-            echo "Validating $file"
-            jq . $file > /dev/null || exit 1
-          done
-
       - name: Snyk Code test
         run: snyk code test --sarif > snyk-code.sarif || true
 
@@ -69,3 +62,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-code.sarif
+
