@@ -1,5 +1,5 @@
 #FROM NODEJS
-FROM node:16-alpine
+FROM node:23.9.0-alpine
 
 # make the 'app' folder the current working dir
 RUN mkdir front
