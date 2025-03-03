@@ -1,0 +1,86 @@
+
+name: Security CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *" # Exécution quotidienne à minuit
+
+jobs:
+  # 📦 Installation des dépendances
+  install-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Backend Dependencies
+        working-directory: ./api
+        run: npm install
+
+      - name: Install Frontend Dependencies
+        working-directory: ./front-office/money-count
+        run: npm install
+
+  # 🔍 Analyse de sécurité avec Snyk
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: install-dependencies
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install Snyk
+        run: npm install -g snyk
+
+      - name: Run Snyk Security Scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects || true  # Continue même si des vulnérabilités sont trouvées
+
+      - name: Monitor vulnerabilities with Snyk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk monitor || true  # Enregistre les vulnérabilités détectées
+
+  # 🔔 Notification Slack si des vulnérabilités sont détectées
+  notify-team:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Send Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: "🚨 Snyk a détecté des vulnérabilités dans le projet. Consultez le rapport ici: https://app.snyk.io"
+
+  # 📊 Mettre à jour le Dashboard Grafana
+  update-dashboard:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Send data to Grafana
+        run: |
+          curl -X POST "http://grafana-instance/api/dashboards/db" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
+          --data @snyk-results.json
+          
