@@ -11,26 +11,7 @@ on:
     - cron: "0 0 * * *" # Exécution quotidienne à minuit
 
 jobs:
-  # 📦 Installation des dépendances
-  install-dependencies:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Backend Dependencies
-        working-directory: ./api
-        run: npm install
-
-      - name: Install Frontend Dependencies
-        working-directory: ./front-office/money-count
-        run: npm install
-
+ 
   # 🔍 Analyse de sécurité avec Snyk
   security-scan:
     runs-on: ubuntu-latest
