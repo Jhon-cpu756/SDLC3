@@ -86,6 +86,7 @@ jobs:
           curl -X POST -H "Content-Type: application/json" \
                -d '{"event":"security_scan","status":"completed"}' \
                ${{ secrets.GRAFANA_WEBHOOK_URL }}
-
+                    
+       
 
 
