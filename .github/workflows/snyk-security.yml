@@ -88,9 +88,9 @@ jobs:
                ${{ secrets.GRAFANA_WEBHOOK_URL }}
 
     build-app:
-    runs-on: ubuntu-latest
+       runs-on: ubuntu-latest
     needs: snyk-security-scan
-    steps:
+     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -110,7 +110,7 @@ jobs:
 
       # 📦 Installer les dépendances Frontend
       - name: Install Frontend Dependencies
-        working-directory: ./front-office
+        working-directory: ./front-office/money-count
         run: npm install
 
       # 🚀 Build Backend
@@ -120,5 +120,5 @@ jobs:
 
       # 🚀 Build Frontend
       - name: Build Frontend
-        working-directory: ./front-office
+        working-directory: ./front-office/money-count
         run: npm run build
