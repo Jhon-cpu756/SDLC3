@@ -59,9 +59,19 @@ jobs:
         run: snyk code test --sarif > snyk-code.sarif || true
 
       - name: Run Snyk Open Source Scan
+        working-directory: ./api
+        run: snyk monitor --all-projects || true
+
+      - name: Run Snyk Open Source Scan (Frontend)
+        working-directory: ./front-office/money-count
         run: snyk monitor --all-projects || true
 
       - name: Run Snyk Infrastructure-as-Code (IaC) Scan
+        working-directory: ./api
+        run: snyk iac test --report || true
+
+      - name: Run Snyk Infrastructure-as-Code (IaC) Scan (Frontend)
+        working-directory: ./front-office/money-count
         run: snyk iac test --report || true
 
       - name: Run Snyk Container Security Scan
