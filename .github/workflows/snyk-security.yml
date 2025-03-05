@@ -86,3 +86,22 @@ jobs:
           curl -X POST -H "Content-Type: application/json" \
                -d '{"event":"security_scan","status":"completed"}' \
                ${{ secrets.GRAFANA_WEBHOOK_URL }}
+
+  build-app:
+    runs-on: ubuntu-latest
+    needs: snyk-security-scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Application
+        run: npm run build
+
