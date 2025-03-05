@@ -1,84 +1,102 @@
-name: Security CI/CD Pipeline
+name: Snyk Security with Monitoring and Alerts
 
 on:
   push:
-    branches:
-      - main
+    branches: ["master"]
   pull_request:
-    branches:
-      - main
+    branches: ["master"]
   schedule:
-    - cron: "0 0 * * *" # Exécution quotidienne à minuit
+    - cron: '0 0 * * *' # Exécution quotidienne à minuit
+
+permissions:
+  contents: read
 
 jobs:
-  # 📦 Installation des dépendances
-  install-dependencies:
+  snyk-security-scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Snyk CLI
+        uses: snyk/actions/setup@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Authenticate with Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+      - name: Validate JSON files
+        run: |
+          for file in $(find . -name "*.json"); do
+            echo "Validating $file"
+            jq . $file > /dev/null || exit 1
+          done
+
+      - name: Run Snyk Code Security Scan
+        run: snyk code test --sarif > snyk-code.sarif || true
+
+      - name: Run Snyk Open Source Scan
+        run: snyk monitor --all-projects || true
+
+      - name: Run Snyk Infrastructure-as-Code (IaC) Scan
+        run: snyk iac test --report || true
+
+      - name: Run Snyk Container Security Scan
+        run: snyk container monitor your/image-to-test --file=Dockerfile || true
+
+      - name: Upload Snyk results to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif
+
+      - name: Send Security Alert to Slack
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: 'Snyk Security Bot'
+          SLACK_ICON_EMOJI: ':warning:'
+          SLACK_MESSAGE: "Snyk Security Scan completed. Check results in GitHub Security Tab."
+
+      - name: Update Vulnerability Dashboard
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+               -d '{"event":"security_scan","status":"completed"}' \
+               ${{ secrets.GRAFANA_WEBHOOK_URL }}
+
+  build-app:
+    runs-on: ubuntu-latest
+    needs: snyk-security-scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
+      # 📦 Installer les dépendances Backend
       - name: Install Backend Dependencies
         working-directory: ./api
         run: npm install
 
+      # 📦 Installer les dépendances Frontend
       - name: Install Frontend Dependencies
         working-directory: ./front-office/money-count
         run: npm install
 
-  # 🔍 Analyse de sécurité avec Snyk
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: install-dependencies
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install Snyk
-        run: npm install -g snyk
+      # 🚀 Build du Backend
+      - name: Build Backend
+        working-directory: ./api
+        run: npm start &
 
-      - name: Run Snyk Security Scan
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test --all-projects || true  # Continue même si des vulnérabilités sont trouvées
-
-      - name: Monitor vulnerabilities with Snyk
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk monitor || true  # Enregistre les vulnérabilités détectées
-
-  # 🔔 Notification Slack si des vulnérabilités sont détectées
-  notify-team:
-    runs-on: ubuntu-latest
-    needs: security-scan
-    steps:
-      - name: Send Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "🚨 Snyk a détecté des vulnérabilités dans le projet. Consultez le rapport ici: https://app.snyk.io"
-
-  # 📊 Mettre à jour le Dashboard Grafana
-  update-dashboard:
-    runs-on: ubuntu-latest
-    needs: security-scan
-    steps:
-      - name: Send data to Grafana
-        run: |
-          curl -X POST "http://grafana-instance/api/dashboards/db" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
-          --data @snyk-results.json
+      # 🚀 Build du Frontend
+      - name: Build Frontend
+        working-directory: ./front-office/money-count
+        run: npm run build
