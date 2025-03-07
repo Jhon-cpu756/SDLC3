@@ -67,8 +67,8 @@ jobs:
 
       - name: Build Docker Images
         run: |
-          docker build -t my-app-backend:latest ./api
-          docker build -t my-app-frontend:latest ./front-office/money-count
+          docker build -t my-app-backend:latest ./api/Dockerfile
+          docker build -t my-app-frontend:latest ./front-office/money-count/Dockerfile
 
       - name: Run Trivy Container Scan (Backend)
         run: trivy image --severity HIGH,CRITICAL my-app-backend:latest
