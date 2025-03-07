@@ -53,7 +53,7 @@ jobs:
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}  # Correction du nom de la variable
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}  # Correction du nom de la variable
           SLACK_MESSAGE: "🚨 Snyk a détecté des vulnérabilités dans le projet. Consultez le rapport ici: https://app.snyk.io"
 
   # 📊 Mettre à jour le Dashboard Grafana
