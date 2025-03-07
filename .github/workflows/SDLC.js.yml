@@ -11,7 +11,7 @@ on:
     - cron: "0 0 * * *" # Exécution quotidienne à minuit
 
 jobs:
- 
+
   # 🔍 Analyse de sécurité avec Snyk
   security-scan:
     runs-on: ubuntu-latest
@@ -35,6 +35,9 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects || true  # Continue même si des vulnérabilités sont trouvées
+
+      - name: Save Snyk results
+        run: snyk test --json > snyk-results.json || true  # Save results to a file
 
       - name: Monitor vulnerabilities with Snyk
         env:
@@ -63,4 +66,4 @@ jobs:
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
           --data @snyk-results.json
-          
+  shell: /usr/bin/bash -e {0}
