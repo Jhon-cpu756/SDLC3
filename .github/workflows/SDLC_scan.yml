@@ -59,19 +59,8 @@ jobs:
         working-directory: ./front-office/money-count
         run: snyk iac test --report || true
 
-      - name: Run Snyk Container Security Scan
-        run: snyk container monitor your/image-to-test --file=Dockerfile || true
-
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
-
-      - name: List files in the api directory
-        run: ls -la ./api
-
-      - name: Build Docker Images
-        run: |
-          docker build -t my-app-backend:latest -f ./api/Dockerfile ./api
-          docker build -t my-app-frontend:latest -f ./front-office/money-count/Dockerfile ./front-office/money-count
 
       - name: Run Trivy Container Scan (Backend)
         run: trivy image --severity HIGH,CRITICAL my-app-backend:latest
@@ -133,5 +122,6 @@ jobs:
         run: npm start &
 
       # 🚀 Build du Frontend
+      - name: Build Frontend
         working-directory: ./front-office/money-count
         run: npm run build
