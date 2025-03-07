@@ -11,33 +11,34 @@ on:
     - cron: "0 0 * * *" # Exécution quotidienne à minuit
 
 jobs:
-
   # 🔍 Analyse de sécurité avec Snyk
   security-scan:
     runs-on: ubuntu-latest
-    
     permissions:
       contents: read
       security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install Snyk
         run: npm install -g snyk
 
       - name: Run Snyk Security Scan
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test --all-projects || true  # Continue même si des vulnérabilités sont trouvées
+        run: snyk test --json --all-projects > snyk-results.json || true  # Enregistre les résultats dans un fichier JSON
 
-      - name: Save Snyk results
-        run: snyk test --json > snyk-results.json || true  # Save results to a file
+      - name: Upload Snyk Results as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-results
+          path: snyk-results.json  # Stocke le fichier pour les jobs suivants
 
       - name: Monitor vulnerabilities with Snyk
         env:
@@ -52,7 +53,7 @@ jobs:
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}  # Correction du nom de la variable
           SLACK_MESSAGE: "🚨 Snyk a détecté des vulnérabilités dans le projet. Consultez le rapport ici: https://app.snyk.io"
 
   # 📊 Mettre à jour le Dashboard Grafana
@@ -60,10 +61,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: security-scan
     steps:
+      - name: Download Snyk Results
+        uses: actions/download-artifact@v3
+        with:
+          name: snyk-results
+          path: ./  # Télécharge le fichier snyk-results.json
+
       - name: Send data to Grafana
         run: |
-          curl -X POST "http://grafana-instance/api/dashboards/db" \
+          curl -X POST "http://grafana-instance/api/datasources/proxy/1/snyk-results" \  # Adaptez l'URL selon votre configuration
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
           --data @snyk-results.json
-  shell: /usr/bin/bash -e {0}
+        env:
+          GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Assurez-vous que le secret existe
