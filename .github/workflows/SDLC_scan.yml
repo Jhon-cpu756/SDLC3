@@ -62,11 +62,19 @@ jobs:
       - name: Run Snyk Container Security Scan
         run: snyk container monitor your/image-to-test --file=Dockerfile || true
 
-      - name: Set up Trivy
-        uses: aquasecurity/trivy-action@master
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
 
-      - name: Run Trivy Container Scan
-        run: trivy image --severity HIGH,CRITICAL your/image-to-test
+      - name: Build Docker Images
+        run: |
+          docker build -t my-app-backend:latest ./api
+          docker build -t my-app-frontend:latest ./front-office/money-count
+
+      - name: Run Trivy Container Scan (Backend)
+        run: trivy image --severity HIGH,CRITICAL my-app-backend:latest
+
+      - name: Run Trivy Container Scan (Frontend)
+        run: trivy image --severity HIGH,CRITICAL my-app-frontend:latest
 
       - name: Upload Snyk results to GitHub Security Tab
         uses: github/codeql-action/upload-sarif@v3
