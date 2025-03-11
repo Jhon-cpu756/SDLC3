@@ -108,6 +108,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          # 📂 Lister l'emplacement de package.json
+      - name: Lister les fichiers et trouver package.json
+        run: |
+          echo "Recherche du fichier package.json..."
+          find . -name "package.json"
 
       # 📦 Installer les dépendances Backend
       - name: Install Backend Dependencies
