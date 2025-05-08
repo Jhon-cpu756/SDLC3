@@ -34,11 +34,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --json --all-projects > snyk-results.json || true  # Enregistre les résultats dans un fichier JSON
 
-      - name: Upload Snyk Results as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: snyk-results
-          path: snyk-results.json  # Stocke le fichier pour les jobs suivants
+     
 
       - name: Monitor vulnerabilities with Snyk
         env:
